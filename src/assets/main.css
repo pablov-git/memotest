@@ -1,0 +1,14 @@
+body {
+
+  background-color: var(--mimi-pink);
+
+  /* CSS HEX */
+  --non-photo-blue: #7bdff2ff;
+  --celeste: #b2f7efff;
+  --mint-cream: #eff7f6ff;
+  --mimi-pink: #f7d6e0ff;
+  --lavender-pink: #f2b5d4ff;
+  --sea-blue:#0077b6;
+  --deep-sea-blue:#044560;
+  --sand:#ebcda7;
+}
