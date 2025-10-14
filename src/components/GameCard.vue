@@ -10,11 +10,17 @@ const emit = defineEmits(['flip-card'])
 </script>
 
 <template>
-  <div class="game-card" :class="{ 'is-flipped': card.flipped, 'is-matched' : card.matched}">
+  <!-- Componente de una carta individual -->
+  <div
+    class="game-card"
+    :class="{ 'is-flipped': card.flipped, 'is-matched': card.matched, 'is-fading': card.fading }"
+  >
     <div class="card-inner">
+      <!-- Cara frontal de la carta -->
       <div class="card-front">
         <img :src="card.icon" alt="icono de carta" />
       </div>
+      <!-- Reverso de la carta -->
       <div class="card-back">
         <img @click="emit('flip-card')" :src="reverso" alt="reverso de carta" />
       </div>
@@ -29,6 +35,7 @@ const emit = defineEmits(['flip-card'])
   perspective: 1000px;
   display: inline-block;
   cursor: pointer;
+  transition: opacity 0.5s ease; /* transición para desaparecer */
 }
 
 /* Contenedor 3D */
@@ -40,13 +47,15 @@ const emit = defineEmits(['flip-card'])
   transition: transform 0.6s;
 }
 
-/* Al voltear, rota el inner para mostrar el frente */
+/* Cuando la carta está volteada, gira el contenedor interno para mostrar la cara frontal */
 .game-card.is-flipped .card-inner {
   transform: rotateY(180deg);
 }
 
-.game-card.is-matched .card-inner {
-  display: none;
+/* Cartas emparejadas desaparecen lentamente */
+.game-card.is-fading {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* Caras */
@@ -64,7 +73,7 @@ const emit = defineEmits(['flip-card'])
   background: white;
 }
 
-/* Por defecto la cara frontal está girada 180 para que, cuando inner rote, se muestre */
+/* Frontal de la carta: oculta al inicio y visible cuando la carta se voltea */
 .card-front {
   transform: rotateY(180deg);
   z-index: 2;
