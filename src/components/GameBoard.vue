@@ -4,6 +4,8 @@ import GameCard from './GameCard.vue'
 
 const props = defineProps({ difficulty: { type: String, default: 'easy' } })
 
+const emit = defineEmits(['changeDifficulty'])
+
 // Importa automáticamente todas las imágenes
 const images = import.meta.glob('../assets/iconos/*.png', { eager: true, import: 'default' })
 
@@ -118,7 +120,14 @@ function flipCard(instanceId) {
   const card = boardCards.value.find((c) => c.instanceId === instanceId)
   // Bloqueamos la acción si la carta no existe, ya está volteada, está emparejada,
   // si ya estamos comprobando otra carta o si el juego terminó.
-  if (!card || card.flipped || card.matched || isChecking || victory.value) {
+  if (
+    !card ||
+    card.flipped ||
+    card.matched ||
+    isChecking ||
+    victory.value ||
+    gamePhase.value === 'revealing'
+  ) {
     return
   }
   card.flipped = true
@@ -140,6 +149,13 @@ function flipCard(instanceId) {
       // Comprobamos si se han emparejado todas las cartas
       if (boardCards.value.every((c) => c.matched)) {
         victory.value = true
+        errorCount.value = 0
+        gamePhase.value = 'victory'
+        setTimeout(() => {
+          gamePhase.value = 'idle'
+          victory.value = false
+          emit('changeDifficulty', '')
+        }, 3000)
       }
     } else {
       // No es un par
@@ -227,8 +243,9 @@ onBeforeUnmount(clearTimer)
       </div>
 
       <button class="play-btn" @click="startGame">
-        {{ gamePhase === 'idle' ? '▶' : '↩️' }}
+        {{ gamePhase === 'idle' ? '▶' : '↩️ Reset game' }}
       </button>
+      <button class="change-difficulty">⚙️ Change difficulty</button>
     </div>
 
     <!-- Mensaje de victoria -->
@@ -246,8 +263,10 @@ onBeforeUnmount(clearTimer)
         @flip-card="flipCard(c.instanceId)"
       />
     </div>
-
-    <div class="error-counter">Errores: {{ errorCount }}</div>
+    <div class="counters-container">
+      <div class="error-counter">Errores: {{ errorCount }}</div>
+      <div class="time-counter">Tiempo:</div>
+    </div>
   </section>
 </template>
 
@@ -256,6 +275,7 @@ onBeforeUnmount(clearTimer)
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  align-items: center;
 }
 
 .board-grid {
@@ -298,7 +318,22 @@ onBeforeUnmount(clearTimer)
   transform: scale(0.95);
 }
 
+.counters-container {
+  display: flex;
+  justify-content: space-between;
+  width: 20%;
+}
+
 .error-counter {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--deep-sea-blue);
+  margin-bottom: 7rem;
+}
+
+.time-counter {
   margin-top: 1.5rem;
   text-align: center;
   font-size: 1.5rem;
@@ -351,5 +386,21 @@ onBeforeUnmount(clearTimer)
   padding: 1rem 2rem;
   border-radius: 12px;
   margin: 0 auto 1rem auto;
+}
+
+.change-difficulty {
+  color: black;
+  background-color: var(--celeste);
+  padding: 18px 42px;
+  font-size: 2rem;
+  font-weight: bold;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    transform 0.1s;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  margin-left: 2rem;
 }
 </style>

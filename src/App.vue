@@ -3,7 +3,7 @@ import { ref } from 'vue'
 import GameBoard from './components/GameBoard.vue'
 import DifficultySelector from './components/DifficultySelector.vue'
 
-const difficulty = ref('easy')
+const difficulty = ref('')
 
 // Cambiar dificultad desde selector
 function changeDifficulty(level) {
@@ -13,8 +13,8 @@ function changeDifficulty(level) {
 
 <template>
   <h2>Memotest</h2>
-  <DifficultySelector :difficulty="difficulty" @changeDifficulty="changeDifficulty" />
-  <GameBoard :difficulty="difficulty" />
+  <DifficultySelector v-show="difficulty==''" :difficulty="difficulty" @changeDifficulty="changeDifficulty" />
+  <GameBoard @changeDifficulty="changeDifficulty" v-show="difficulty!=''" :difficulty="difficulty" />
 </template>
 
 <style scoped>
