@@ -1,6 +1,11 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import GameCard from './GameCard.vue'
+import { DateTime } from 'luxon'
+
+const startTime = ref(null)      // Momento en que empieza el juego
+const elapsedTime = ref('00:00') // Tiempo transcurrido en formato mm:ss
+let timerId = null                // Para el setInterval
 
 const props = defineProps({ difficulty: { type: String, default: 'easy' } })
 
@@ -146,11 +151,12 @@ function flipCard(instanceId) {
       flippedCards.value = []
       isChecking = false
 
-      // Comprobamos si se han emparejado todas las cartas
+      // Comprobamos si se han emparejado todas las cartas (victoria)
       if (boardCards.value.every((c) => c.matched)) {
         victory.value = true
         errorCount.value = 0
         gamePhase.value = 'victory'
+        clearTimer()
         setTimeout(() => {
           gamePhase.value = 'idle'
           victory.value = false
@@ -174,10 +180,33 @@ function flipCard(instanceId) {
 const gridCols = computed(() => Math.ceil(Math.sqrt(boardCards.value.length)))
 const gamePhase = ref('idle')
 const countdown = ref(0)
-let timerId = null
 
-// Limpia el temporizador si hay uno activo
-const clearTimer = () => (timerId && clearInterval(timerId), (timerId = null))
+// Inicia un cronómetro desde cero y actualiza cada segundo la variable elapsedTime
+function startTimer() {
+   // Guardamos el momento actual como hora de inicio del juego
+  startTime.value = DateTime.now()
+  // Inicializamos el tiempo transcurrido en 00:00
+  elapsedTime.value = '00:00'
+
+  // Creamos un intervalo que se ejecuta cada segundo
+  timerId = setInterval(() => {
+    // Obtenemos el momento actual
+    const now = DateTime.now()
+    // Calculamos la diferencia entre ahora y el inicio en minutos y segundos
+    const diff = now.diff(startTime.value, ['minutes', 'seconds']).toObject()
+     // Redondeamos hacia abajo los minutos y segundos y los convertimos en strings de 2 dígitos
+    const minutes = String(Math.floor(diff.minutes)).padStart(2, '0')
+    const seconds = String(Math.floor(diff.seconds)).padStart(2, '0')
+    // Actualizamos la variable elapsedTime con el formato "mm:ss"
+    elapsedTime.value = `${minutes}:${seconds}`
+  }, 1000)
+}
+
+// Detiene el cronómetro y limpia el identificador del intervalo, evitando que siga actualizando la variable elapsedTime
+const clearTimer = () => {
+  if (timerId) clearInterval(timerId)
+  timerId = null
+}
 
 // Inicia el juego
 function startGame() {
@@ -211,6 +240,7 @@ function startGame() {
           // Fase 3: oculta las cartas y comienza el juego real
           boardCards.value.forEach((c) => (c.flipped = false))
           gamePhase.value = 'playing'
+          startTimer()
         }
       }, 1000)
     }
@@ -245,7 +275,7 @@ onBeforeUnmount(clearTimer)
       <button class="play-btn" @click="startGame">
         {{ gamePhase === 'idle' ? '▶' : '↩️ Reset game' }}
       </button>
-      <button class="change-difficulty">⚙️ Change difficulty</button>
+      <button class="change-difficulty" @click="$emit('changeDifficulty', '')">⚙️ Change difficulty</button>
     </div>
 
     <!-- Mensaje de victoria -->
@@ -265,7 +295,7 @@ onBeforeUnmount(clearTimer)
     </div>
     <div class="counters-container">
       <div class="error-counter">Errores: {{ errorCount }}</div>
-      <div class="time-counter">Tiempo:</div>
+      <div class="time-counter">Tiempo: {{ elapsedTime }}</div>
     </div>
   </section>
 </template>
@@ -321,7 +351,7 @@ onBeforeUnmount(clearTimer)
 .counters-container {
   display: flex;
   justify-content: space-between;
-  width: 20%;
+  width: 15%;
 }
 
 .error-counter {
