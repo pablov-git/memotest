@@ -13,8 +13,8 @@ function changeDifficulty(level) {
 
 <template>
   <h2>Memotest</h2>
-  <DifficultySelector v-show="difficulty==''" :difficulty="difficulty" @changeDifficulty="changeDifficulty" />
-  <GameBoard @changeDifficulty="changeDifficulty" v-show="difficulty!=''" :difficulty="difficulty" />
+  <DifficultySelector v-if="difficulty==''" :difficulty="difficulty" @changeDifficulty="changeDifficulty" />
+  <GameBoard @changeDifficulty="changeDifficulty" v-else :difficulty="difficulty" />
 </template>
 
 <style scoped>
