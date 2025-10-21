@@ -3,7 +3,9 @@ import { ref, computed, watch, onBeforeUnmount } from 'vue'
 import GameCard from './GameCard.vue'
 import NameSelector from './NameSelector.vue'
 import { DateTime } from 'luxon'
+import UserRanking from './UserRanking.vue'
 
+const showRanking = ref(false)
 const startTime = ref(null) // Momento en que empieza el juego
 const elapsedTime = ref('00:00') // Tiempo transcurrido en formato mm:ss
 let timerId = null // Para el setInterval
@@ -13,6 +15,7 @@ const props = defineProps({ difficulty: { type: String, default: 'easy' } })
 const emit = defineEmits(['changeDifficulty'])
 
 const modal = ref(false)
+const playerName = ref('')
 
 // Importa automáticamente todas las imágenes
 const images = import.meta.glob('../assets/iconos/*.png', { eager: true, import: 'default' })
@@ -94,7 +97,19 @@ const boardCards = ref([])
 // Función auxiliar para mezclar aleatoriamente un array
 const shuffle = (arr) => arr.sort(() => Math.random() - 0.5)
 
+function openNameModal() {
+  modal.value = true
+}
+
+function handleStartFromModal(name) {
+  // opcional: guardar el nombre si más adelante quieres usarlo
+  if (name) playerName.value = name
+  modal.value = false
+  startGame()
+}
+
 function changeDifficultyAndReset() {
+  showRanking.value = false
   emit('changeDifficulty', '')
   clearTimer()
   elapsedTime.value = '00:00'
@@ -165,12 +180,13 @@ function flipCard(instanceId) {
         victory.value = true
         gamePhase.value = 'victory'
         clearTimer()
+        saveScore()
+
+        // Mostrar victoria durante 3 segundos
         setTimeout(() => {
-          errorCount.value = 0
-          gamePhase.value = 'idle'
           victory.value = false
-          emit('changeDifficulty', '')
-        }, 10000)
+          showRanking.value = true
+        }, 3000)
       }
     } else {
       // No es un par
@@ -184,6 +200,40 @@ function flipCard(instanceId) {
     }
   }
   console.log(flippedCards.value)
+}
+
+// 🆕 Guarda la puntuación del jugador en localStorage
+function saveScore() {
+  const name = playerName.value
+
+  const score = {
+    name,
+    time: elapsedTime.value,
+    errors: errorCount.value
+  }
+
+  // Recuperar ranking existente o crear uno vacío
+  const stored = JSON.parse(localStorage.getItem('ranking' + props.difficulty) || '[]')
+
+  // Añadir nueva puntuación
+  stored.push(score)
+
+  // Ordenar: primero por errores, luego por tiempo (mm:ss)
+  stored.sort((a, b) => {
+    if (a.errors !== b.errors) return a.errors - b.errors
+    // Convertir tiempo "mm:ss" a segundos
+    const toSeconds = (t) => {
+      const [m, s] = t.split(':').map(Number)
+      return m * 60 + s
+    }
+    return toSeconds(a.time) - toSeconds(b.time)
+  })
+
+  // Mantener solo los 10 mejores
+  const top10 = stored.slice(0, 10)
+
+  // Guardar en localStorage
+  localStorage.setItem('ranking' + props.difficulty, JSON.stringify(top10))
 }
 
 const gridCols = computed(() => Math.ceil(Math.sqrt(boardCards.value.length)))
@@ -219,7 +269,7 @@ const clearTimer = () => {
 
 // Inicia el juego
 function startGame() {
-  modal.value=true
+  showRanking.value = false
   clearTimer()
   errorCount.value = 0
   victory.value = false
@@ -282,7 +332,7 @@ onBeforeUnmount(clearTimer)
         </div>
       </div>
 
-      <button class="play-btn" @click="startGame">
+      <button class="play-btn" @click="openNameModal">
         {{ gamePhase === 'idle' ? '▶' : '↩️ Reset game' }}
       </button>
       <button class="change-difficulty" @click="changeDifficultyAndReset()">
@@ -293,9 +343,11 @@ onBeforeUnmount(clearTimer)
     <!-- Mensaje de victoria -->
     <div v-if="victory" class="victory-overlay">
       <p>¡Victoria!</p>
+      <p>Jugador: {{ playerName }}</p>
       <p>Tiempo: {{ elapsedTime }}</p>
       <p>Errores: {{ errorCount }}</p>
     </div>
+    <UserRanking v-if="showRanking" :difficulty="difficulty" />
     <div v-else>
       <div
         class="board-grid"
@@ -315,7 +367,10 @@ onBeforeUnmount(clearTimer)
       </div>
     </div>
   </section>
-  <div v-if="modal"> <NameSelector /> </div>
+  <div v-if="modal">
+    <!-- NameSelector emitirá ('start-game', nombre) -->
+    <NameSelector @start-game="handleStartFromModal" />
+  </div>
 </template>
 
 <style scoped>
