@@ -4,7 +4,8 @@ import { ref, onMounted } from 'vue'
 const ranking = ref([])
 
 const props = defineProps({
-  difficulty: { type: String}
+  difficulty: { type: String},
+  currentPlayer: { type: Object }
 })
 
 onMounted(() => {
@@ -15,7 +16,7 @@ onMounted(() => {
 
 <template>
   <div class="ranking-container">
-    <h3>🏆 Ranking - Dificultad: {{ difficulty }} </h3>
+    <h3>🏆 Ranking - Mode: {{ difficulty }} </h3>
     <table v-if="ranking.length > 0">
       <thead>
         <tr>
@@ -26,7 +27,7 @@ onMounted(() => {
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(user, index) in ranking" :key="index">
+        <tr v-for="(user, index) in ranking" :key="index"  :class="{ 'current-player': user.name === currentPlayer?.name && user.errors === currentPlayer?.errors && user.time === currentPlayer?.time }">
           <td>{{ index + 1 }}</td>
           <td>{{ user.name }}</td>
           <td>{{ user.errors }}</td>
@@ -66,5 +67,9 @@ th {
 
 tbody tr:nth-child(even) {
   background-color: #eef2f3;
+}
+
+.current-player td {
+  font-weight: bold;
 }
 </style>

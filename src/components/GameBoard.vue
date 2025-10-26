@@ -4,11 +4,19 @@ import GameCard from './GameCard.vue'
 import NameSelector from './NameSelector.vue'
 import { DateTime } from 'luxon'
 import UserRanking from './UserRanking.vue'
+import confetti from 'canvas-confetti'
 
 const showRanking = ref(false)
 const startTime = ref(null) // Momento en que empieza el juego
 const elapsedTime = ref('00:00') // Tiempo transcurrido en formato mm:ss
 let timerId = null // Para el setInterval
+
+const flipSound = new Audio('/sounds/cardFlip.ogg')
+const correctSound = new Audio('/sounds/correct.ogg')
+const victorySound = new Audio('/sounds/victory.ogg')
+const failureSound = new Audio('/sounds/failure.ogg')
+const errorSound = new Audio('/sounds/error.ogg')
+const confettiSound = new Audio('/sounds/confetti.wav')
 
 const props = defineProps({ difficulty: { type: String, default: 'easy' } })
 
@@ -97,6 +105,74 @@ const boardCards = ref([])
 // Función auxiliar para mezclar aleatoriamente un array
 const shuffle = (arr) => arr.sort(() => Math.random() - 0.5)
 
+function playFlipSound() {
+  flipSound.currentTime = 0 // reinicia por si se reproduce rápido varias veces
+  flipSound.play().catch(() => {}) // evita errores si el usuario no ha interactuado aún
+}
+
+// Funciones para la reproducción de sonidos //
+function playCorrectSound() {
+  // Reinicia el sonido por si se reproduce varias veces seguidas
+  correctSound.currentTime = 0
+  // Reproduce el sonido, evitando errores si el usuario aún no ha interactuado con la página
+  correctSound.play().catch(() => {})
+}
+
+function playErrorSound() {
+  errorSound.currentTime = 0
+  errorSound.play().catch(() => {})
+}
+
+function playVictorySound() {
+  victorySound.currentTime = 0
+  victorySound.play().catch(() => {})
+}
+
+function playFailureSound() {
+  failureSound.currentTime = 0
+  failureSound.play().catch(() => {})
+}
+
+function playConfettiSound() {
+  confettiSound.currentTime = 0
+  confettiSound.play().catch(() => {})
+}
+
+// --- CONFETTI ---
+function launchConfetti() {
+  const duration = 2000 // duración total de la animación en milisegundos
+  const end = Date.now() + duration // momento exacto en que debe terminar la animación
+
+  // Colores que se usarán para las partículas de confeti
+  const colors = ['#00c3ff', '#ffcb00', '#ff4081', '#4caf50']
+
+  // Función autoinvocada que genera un "frame" de confeti
+  ;(function frame() {
+    // Estallido de confeti desde la izquierda
+    confetti({
+      particleCount: 5, // número de partículas
+      angle: 60, // dirección de lanzamiento
+      spread: 55, // dispersión de partículas
+      origin: { x: 0 }, // punto de origen en el borde izquierdo
+      colors, // colores de las partículas
+    })
+
+    // Estallido de confeti desde la derecha
+    confetti({
+      particleCount: 5,
+      angle: 120,
+      spread: 55,
+      origin: { x: 1 }, // punto de origen en el borde derecho
+      colors,
+    })
+
+    // Si aún no ha pasado el tiempo total, pedimos el siguiente frame
+    if (Date.now() < end) {
+      requestAnimationFrame(frame) // llama a frame de nuevo para animación continua
+    }
+  })() // la función se ejecuta inmediatamente para iniciar la animación
+}
+
 function openNameModal() {
   modal.value = true
 }
@@ -161,6 +237,7 @@ function flipCard(instanceId) {
   }
   card.flipped = true
   flippedCards.value.push(card)
+  playFlipSound()
 
   if (flippedCards.value.length === 2) {
     isChecking = true
@@ -174,23 +251,36 @@ function flipCard(instanceId) {
       second.fading = true
       flippedCards.value = []
       isChecking = false
+      playCorrectSound()
 
       // Comprobamos si se han emparejado todas las cartas (victoria)
       if (boardCards.value.every((c) => c.matched)) {
         victory.value = true
         gamePhase.value = 'victory'
         clearTimer()
-        saveScore()
 
-        // Mostrar victoria durante 3 segundos
+        // Guardamos puntuación y obtenemos posición
+        const position = saveScore()
+
+        playVictorySound()
+
+        // Mostrar victoria durante 5 segundos, luego el ranking
         setTimeout(() => {
           victory.value = false
           showRanking.value = true
-        }, 3000)
+          // Efecto cuando aparece el ranking
+          if (position > 0 && position <= 3) {
+            launchConfetti()
+            playConfettiSound()
+          } else {
+            playFailureSound()
+          }
+        }, 5000)
       }
     } else {
       // No es un par
       errorCount.value++
+      playErrorSound()
       setTimeout(() => {
         first.flipped = false
         second.flipped = false
@@ -202,14 +292,14 @@ function flipCard(instanceId) {
   console.log(flippedCards.value)
 }
 
-// 🆕 Guarda la puntuación del jugador en localStorage
+// Guarda la puntuación del jugador en localStorage
 function saveScore() {
   const name = playerName.value
 
   const score = {
     name,
     time: elapsedTime.value,
-    errors: errorCount.value
+    errors: errorCount.value,
   }
 
   // Recuperar ranking existente o crear uno vacío
@@ -234,6 +324,20 @@ function saveScore() {
 
   // Guardar en localStorage
   localStorage.setItem('ranking' + props.difficulty, JSON.stringify(top10))
+
+  // Buscamos el índice de la puntuación actual dentro del top10
+  const playerIndex = top10.findIndex((entry) => {
+    const sameName = entry.name === name
+    const sameErrors = entry.errors === score.errors
+    const sameTime = entry.time === score.time
+    return sameName && sameErrors && sameTime
+  })
+
+  // Convertimos el índice a posición
+  const playerPosition = playerIndex + 1
+
+  // Devolvemos la posición (0 si no se encontró)
+  return playerPosition
 }
 
 const gridCols = computed(() => Math.ceil(Math.sqrt(boardCards.value.length)))
@@ -342,12 +446,18 @@ onBeforeUnmount(clearTimer)
 
     <!-- Mensaje de victoria -->
     <div v-if="victory" class="victory-overlay">
-      <p>¡Victoria!</p>
-      <p>Jugador: {{ playerName }}</p>
-      <p>Tiempo: {{ elapsedTime }}</p>
-      <p>Errores: {{ errorCount }}</p>
+      <div class="victory-card">
+        <h2> ¡Victoria! </h2>
+        <p><strong>Jugador:</strong> {{ playerName }}</p>
+        <p><strong>Tiempo:</strong> {{ elapsedTime }}</p>
+        <p><strong>Errores:</strong> {{ errorCount }}</p>
+      </div>
     </div>
-    <UserRanking v-if="showRanking" :difficulty="difficulty" />
+    <UserRanking
+      v-if="showRanking"
+      :difficulty="difficulty"
+      :current-player="{ name: playerName, errors: errorCount, time: elapsedTime }"
+    />
     <div v-else>
       <div
         class="board-grid"
@@ -485,11 +595,33 @@ onBeforeUnmount(clearTimer)
   font-size: 3rem;
   font-weight: bold;
   color: white;
-  background: rgba(0, 102, 255, 0.8);
   padding: 1rem 2rem;
   border-radius: 12px;
   margin: 0 auto 1rem auto;
 }
+
+.victory-card {
+  background: linear-gradient(135deg, var(--sea-blue), var(--deep-sea-blue));
+  color: white;
+  padding: 2rem 3rem;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  text-align: center;
+  animation: popIn 0.5s ease-out forwards;
+  min-width: 280px;
+}
+
+.victory-card h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+}
+
+.victory-card p {
+  font-size: 1.3rem;
+  margin: 0.5rem 0;
+}
+
 
 .change-difficulty {
   color: black;
@@ -505,5 +637,31 @@ onBeforeUnmount(clearTimer)
     transform 0.1s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   margin-left: 2rem;
+}
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .board-grid {
+    column-gap: 1rem;
+    row-gap: 1rem;
+    /* Ajusta el tamaño de las cartas para que quepan mejor */
+    grid-template-columns: repeat(auto-fit, minmax(60px, 1fr));
+  }
+
+  .play-btn,
+  .change-difficulty {
+    padding: 14px 32px;
+    font-size: 1.5rem;
+  }
+
+  .error-counter,
+  .time-counter {
+    font-size: 1.2rem;
+  }
+
+  .victory-overlay {
+    font-size: 2rem;
+    padding: 0.8rem 1.5rem;
+  }
 }
 </style>
