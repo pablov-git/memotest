@@ -76,4 +76,6 @@ The project is live at:
 👉 https://pablov-git-memotest.netlify.app/
 
 
-## ✒️ Created by Pablo Vacas Macarro
+## ✒️ Created by
+
+• Pablo Vacas Macarro
