@@ -2,7 +2,10 @@
 import { defineProps, defineEmits } from 'vue'
 
 defineProps({
-  difficulty: { type: String, default: 'easy' }
+  difficulty: {
+    type: String,
+    default: 'easy',
+  },
 })
 
 const emit = defineEmits(['changeDifficulty'])
@@ -54,7 +57,10 @@ const emit = defineEmits(['changeDifficulty'])
   border: 1px solid #444;
   background: white;
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s, transform 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s,
+    transform 0.2s;
 }
 
 .difficulty-btn:hover {

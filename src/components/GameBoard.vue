@@ -18,7 +18,16 @@ const failureSound = new Audio('/sounds/failure.ogg')
 const errorSound = new Audio('/sounds/error.ogg')
 const confettiSound = new Audio('/sounds/confetti.wav')
 
-const props = defineProps({ difficulty: { type: String, default: 'easy' } })
+const props = defineProps({
+  difficulty: {
+    type: String,
+    default: 'easy',
+  },
+  isMobile: {
+    type: Boolean,
+    default: false,
+  },
+})
 
 const emit = defineEmits(['changeDifficulty'])
 
@@ -97,7 +106,11 @@ console.log(cards.value)
 const flippedCards = ref([])
 
 // Define cuántas cartas usar según la dificultad elegida
-const difficultyMap = { easy: 8, normal: 15, hard: 28 }
+const difficultyMap = {
+  easy: 8,
+  normal: 15,
+  hard: 28,
+}
 
 // Array con las cartas visibles en el tablero (duplicadas y mezcladas)
 const boardCards = ref([])
@@ -110,7 +123,7 @@ function playFlipSound() {
   flipSound.play().catch(() => {}) // evita errores si el usuario no ha interactuado aún
 }
 
-// Funciones para la reproducción de sonidos //
+// Funciones para la reproducción de sonidos
 function playCorrectSound() {
   // Reinicia el sonido por si se reproduce varias veces seguidas
   correctSound.currentTime = 0
@@ -184,6 +197,10 @@ function handleStartFromModal(name) {
   startGame()
 }
 
+function closeModal() {
+  modal.value = false
+}
+
 function changeDifficultyAndReset() {
   showRanking.value = false
   emit('changeDifficulty', '')
@@ -194,6 +211,7 @@ function changeDifficultyAndReset() {
 // Genera el tablero duplicando las cartas seleccionadas y mezclándolas
 function buildBoard() {
   const count = difficultyMap[props.difficulty]
+
   // Selecciona solo las cartas necesarias según la dificultad
   const selected = cards.value.slice(0, count)
 
@@ -222,25 +240,29 @@ const victory = ref(false)
 // Función para voltear cartas
 function flipCard(instanceId) {
   console.log('Se gira la carta ' + instanceId)
+
   const card = boardCards.value.find((c) => c.instanceId === instanceId)
+
   // Bloqueamos la acción si la carta no existe, ya está volteada, está emparejada,
-  // si ya estamos comprobando otra carta o si el juego terminó.
+  // si ya estamos comprobando otra carta, si el juego terminó o si no está en fase de juego.
   if (
     !card ||
     card.flipped ||
     card.matched ||
     isChecking ||
     victory.value ||
-    gamePhase.value === 'revealing'
+    gamePhase.value !== 'playing'
   ) {
     return
   }
+
   card.flipped = true
   flippedCards.value.push(card)
   playFlipSound()
 
   if (flippedCards.value.length === 2) {
     isChecking = true
+
     const [first, second] = flippedCards.value
 
     if (first.id === second.id) {
@@ -249,8 +271,10 @@ function flipCard(instanceId) {
       second.matched = true
       first.fading = true
       second.fading = true
+
       flippedCards.value = []
       isChecking = false
+
       playCorrectSound()
 
       // Comprobamos si se han emparejado todas las cartas (victoria)
@@ -268,6 +292,7 @@ function flipCard(instanceId) {
         setTimeout(() => {
           victory.value = false
           showRanking.value = true
+
           // Efecto cuando aparece el ranking
           if (position > 0 && position <= 3) {
             launchConfetti()
@@ -281,6 +306,7 @@ function flipCard(instanceId) {
       // No es un par
       errorCount.value++
       playErrorSound()
+
       setTimeout(() => {
         first.flipped = false
         second.flipped = false
@@ -289,13 +315,13 @@ function flipCard(instanceId) {
       }, 1000)
     }
   }
+
   console.log(flippedCards.value)
 }
 
 // Guarda la puntuación del jugador en localStorage
 function saveScore() {
   const name = playerName.value
-
   const score = {
     name,
     time: elapsedTime.value,
@@ -311,6 +337,7 @@ function saveScore() {
   // Ordenar: primero por errores, luego por tiempo (mm:ss)
   stored.sort((a, b) => {
     if (a.errors !== b.errors) return a.errors - b.errors
+
     // Convertir tiempo "mm:ss" a segundos
     const toSeconds = (t) => {
       const [m, s] = t.split(':').map(Number)
@@ -348,6 +375,7 @@ const countdown = ref(0)
 function startTimer() {
   // Guardamos el momento actual como hora de inicio del juego
   startTime.value = DateTime.now()
+
   // Inicializamos el tiempo transcurrido en 00:00
   elapsedTime.value = '00:00'
 
@@ -355,11 +383,14 @@ function startTimer() {
   timerId = setInterval(() => {
     // Obtenemos el momento actual
     const now = DateTime.now()
+
     // Calculamos la diferencia entre ahora y el inicio en minutos y segundos
     const diff = now.diff(startTime.value, ['minutes', 'seconds']).toObject()
+
     // Redondeamos hacia abajo los minutos y segundos y los convertimos en strings de 2 dígitos
     const minutes = String(Math.floor(diff.minutes)).padStart(2, '0')
     const seconds = String(Math.floor(diff.seconds)).padStart(2, '0')
+
     // Actualizamos la variable elapsedTime con el formato "mm:ss"
     elapsedTime.value = `${minutes}:${seconds}`
   }, 1000)
@@ -435,11 +466,10 @@ onBeforeUnmount(clearTimer)
           </div>
         </div>
       </div>
-
       <button class="play-btn" @click="openNameModal">
         {{ gamePhase === 'idle' ? '▶' : '↩️ Reset game' }}
       </button>
-      <button class="change-difficulty" @click="changeDifficultyAndReset()">
+      <button v-if="!props.isMobile" class="change-difficulty" @click="changeDifficultyAndReset()">
         ⚙️ Change difficulty
       </button>
     </div>
@@ -447,17 +477,19 @@ onBeforeUnmount(clearTimer)
     <!-- Mensaje de victoria -->
     <div v-if="victory" class="victory-overlay">
       <div class="victory-card">
-        <h2> ¡Victoria! </h2>
+        <h2>¡Victoria!</h2>
         <p><strong>Jugador:</strong> {{ playerName }}</p>
         <p><strong>Tiempo:</strong> {{ elapsedTime }}</p>
         <p><strong>Errores:</strong> {{ errorCount }}</p>
       </div>
     </div>
+
     <UserRanking
       v-if="showRanking"
       :difficulty="difficulty"
       :current-player="{ name: playerName, errors: errorCount, time: elapsedTime }"
     />
+
     <div v-else>
       <div
         class="board-grid"
@@ -477,9 +509,10 @@ onBeforeUnmount(clearTimer)
       </div>
     </div>
   </section>
+
   <div v-if="modal">
-    <!-- NameSelector emitirá ('start-game', nombre) -->
-    <NameSelector @start-game="handleStartFromModal" />
+    <!-- NameSelector emitirá ('start-game', nombre) o ('close-modal') -->
+    <NameSelector @start-game="handleStartFromModal" @close-modal="closeModal" />
   </div>
 </template>
 
@@ -614,14 +647,13 @@ onBeforeUnmount(clearTimer)
 .victory-card h2 {
   font-size: 2.5rem;
   margin-bottom: 1rem;
-  text-shadow: 2px 2px 6px rgba(0,0,0,0.4);
+  text-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
 }
 
 .victory-card p {
   font-size: 1.3rem;
   margin: 0.5rem 0;
 }
-
 
 .change-difficulty {
   color: black;
@@ -637,6 +669,58 @@ onBeforeUnmount(clearTimer)
     transform 0.1s;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   margin-left: 2rem;
+}
+
+/* Móvil */
+@media (max-width: 767px) {
+  .board-grid {
+    column-gap: 1rem;
+    row-gap: 1rem;
+  }
+
+  .play-btn {
+    padding: 14px 32px;
+    font-size: 1.5rem;
+  }
+
+  .error-counter,
+  .time-counter {
+    font-size: 1.2rem;
+  }
+
+  .victory-overlay {
+    padding: 0.5rem 1rem;
+  }
+
+  .victory-card {
+    padding: 1.5rem 2rem;
+    min-width: auto;
+    width: 85%;
+    max-width: 300px;
+  }
+
+  .victory-card h2 {
+    font-size: 1.8rem;
+    margin-bottom: 0.8rem;
+  }
+
+  .victory-card p {
+    font-size: 1rem;
+    margin: 0.3rem 0.7rem;
+  }
+
+  .countdown-circle {
+    width: 90px;
+    height: 90px;
+  }
+
+  .countdown-number {
+    font-size: 2.5rem;
+  }
+
+  .countdown-text {
+    font-size: 0.9rem;
+  }
 }
 
 /* Tablet */

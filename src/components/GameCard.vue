@@ -2,11 +2,10 @@
 import reverso from '../assets/iconos/reverso.png'
 
 defineProps({
-  card: Object
+  card: Object,
 })
 
 const emit = defineEmits(['flip-card'])
-
 </script>
 
 <template>
