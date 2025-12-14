@@ -1,44 +1,79 @@
-# memotest
+# 🧠 Memotest
+A memory card game built with Vue 3.
 
-This template should help get you started developing with Vue 3 in Vite.
+The game challenges the player to find matching pairs of cards within the shortest time and with the fewest errors possible.
+It includes multiple difficulty levels, sound effects, animations, and a persistent ranking system using
 
-## Recommended IDE Setup
+---
 
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+## 🧰 Technologies Used
 
-## Recommended Browser Setup
+- Vue 3 (Composition API)
+- JavaScript
+- CSS
+- Luxon (time handling)
+- Canvas Confetti
+- LocalStorage
 
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd) 
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
+---
 
-## Customize configuration
+## 📂 Project Structure
 
-See [Vite Configuration Reference](https://vite.dev/config/).
+| File / Folder   | Description |
+|-----------------|-------------|
+| `App.vue`    | Main app component and difficulty control |
+| `GameBoard.vue`   | Core game logic and board rendering |
+| `GameCard.vue`     | Individual card component with flip animation |
+| `DifficultySelector.vue`     | Difficulty selection UI |
+| `UserRanking.vue`    | Ranking table per difficulty |
 
-## Project Setup
+---
 
-```sh
-npm install
-```
+🎮 Game Features
 
-### Compile and Hot-Reload for Development
+- Three difficulty levels (easy, normal, hard)
 
-```sh
-npm run dev
-```
+- Countdown and memorization phase before playing
 
-### Compile and Minify for Production
+- Card flip and match animations
 
-```sh
-npm run build
-```
+- Sound effects for actions and results
 
-### Lint with [ESLint](https://eslint.org/)
+- Error counter and timer
 
-```sh
-npm run lint
-```
+- Persistent ranking per difficulty
+
+- Responsive layout (mobile starts directly in easy mode)
+
+---
+
+## ⚙️ How to Run Locally
+
+1. Clone this repository:
+
+   ```bash
+   git clone [https://github.com/pablov-git/e-commerce.git](https://github.com/pablov-git/memotest)
+
+
+2. Navigate into the project directory:
+
+   ```bash
+   cd memotest
+
+3. Install dependencies:
+
+   ```bash
+   npm install
+
+3. Run the development server:
+
+   ```bash
+   npm run dev
+
+## 🚀 Deployment
+
+The project is live at:
+👉 https://pablov-git-memotest.netlify.app/
+
+
+## ✒️ Created by Pablo Vacas Macarro
